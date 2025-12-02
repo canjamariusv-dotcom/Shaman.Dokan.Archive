@@ -1,28 +1,47 @@
 ﻿using System;
-using System.Linq;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using SevenZip;
-using System.IO;
+using DokanNet;
 
 namespace Shaman.Dokan
 {
-    class SevenZipProgram
+    class Program
     {
         static int Main(string[] args)
         {
-            SevenZipExtractor.SetLibraryPath(Path.Combine(Path.GetDirectoryName(typeof(SevenZipProgram).Assembly.Location), "7z.dll"));
-            var file = args.FirstOrDefault(x => !x.StartsWith("-"));
-            if (file == null)
+            if (args.Length < 2)
             {
-                Console.WriteLine("Must specify a file.");
+                Console.WriteLine("Usage: Shaman.Dokan.Archive <archive-file> <mount-point>");
                 return 1;
             }
-            var mountpoint = new SevenZipFs(file).MountSimple(4);
-            if (args.Contains("--open"))
-                Process.Start(mountpoint);
-            new TaskCompletionSource<bool>().Task.Wait();
-            return 0;
+
+            string archivePath = args[0];
+            string mountPoint = args[1];
+
+            Console.WriteLine($"Mounting archive: {archivePath}");
+            Console.WriteLine($"Mounting at: {mountPoint}");
+
+            var fs = new SevenZipFs(archivePath);
+
+            DokanOptions options =
+                DokanOptions.DebugMode |
+                DokanOptions.StderrOutput |
+                DokanOptions.WriteProtection;
+
+            try
+            {
+                // IMPORTANT: namespace complet
+                DokanNet.Dokan.Mount(fs, mountPoint, options);
+
+                Console.WriteLine("Mounted successfully. Press Enter to exit.");
+                Console.ReadLine();
+
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Mount failed:");
+                Console.WriteLine(ex);
+                return -1;
+            }
         }
     }
 }
